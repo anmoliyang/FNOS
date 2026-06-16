@@ -1,0 +1,32 @@
+# 1. 创建备份目录和工作目录（图标）
+mkdir -p /vol1/www/app/icons
+mkdir -p /vol1/www/app/icons_backup
+
+# 2. 写服务
+cat > /lib/systemd/system/bind-www.service << 'EOF'
+[Unit]
+Description=Auto restore and bind custom icons
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 30
+ExecStart=/bin/bash -c '\
+    # 恢复图标
+    if [ -d "/vol1/www/app/icons_backup" ]; then \
+        if [ ! -f "/vol1/www/app/icons/icon.png" ] && [ -f "/vol1/www/app/icons_backup/icon.png" ]; then \
+            rm -rf /vol1/www/app/icons/* 2>/dev/null; \
+            cp -a /vol1/www/app/icons_backup/. /vol1/www/app/icons/; \
+        fi; \
+        mkdir -p /usr/trim/www/static/app/icons; \
+        mount --bind /vol1/www/app/icons /usr/trim/www/static/app/icons; \
+    fi'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 3. 重启服务
+systemctl daemon-reload
+systemctl enable bind-www.service --now
